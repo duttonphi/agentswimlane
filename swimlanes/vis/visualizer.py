@@ -120,8 +120,8 @@ class SwimlaneVisualizer:
         print("PARTICIPATION SUMMARY: " + summary)
         return self.plot_transitions(timeline_parts)
 
-    def render_task(self, llm_client, task_description):
-        timeline, summary = self.complete_timeline(llm_client, task_description)
+    def render_task(self, llm_client, task_description, model="gpt-4o"):
+        timeline, summary = self.complete_timeline(llm_client, task_description, model=model)
         return self.plot_timeline(timeline, summary)
     
 
