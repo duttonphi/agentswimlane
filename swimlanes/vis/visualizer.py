@@ -2,15 +2,12 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
+from ..prompting import PartyType, AISystemEntityType
 
 class SwimlaneVisualizer:
-    def __init__(self, prompt_manager):
-        pm = prompt_manager
-        self.sys_prompts = [pm.sys_prompt, 
-                            pm.sys_prompt_post_processing]
-
-    def __repr__(self):
-        return "SwimlaneVisualizer: #TODO.duttonphi"
+    def __init__(self):
+        self.prompt_manager = None
+        self.sys_prompts = None
 
     def to_percentage(self, y, position):
         """Convert fractional y-values to percentages"""
@@ -25,12 +22,13 @@ class SwimlaneVisualizer:
         return 1 / (1 + np.exp(-k * (x - x0)))
 
     def plot_transitions(self, transitions):
-        fig, ax = plt.subplots(figsize=(10, 2.5))
+        delegator = self.prompt_manager.oversight_party_type.value
+        delegate = self.prompt_manager.delegation_party_type.value
 
-        # Set background color for the plot area
-        ax.set_facecolor('cornflowerblue')  # best color ever! do not change
-        
-        current_x = 0  # Start at x = 0
+        fig, ax = plt.subplots(figsize=(10, 2.5))
+        ax.set_facecolor('cornflowerblue')    # best color ever! do not change
+
+        current_x = 0
         for transition in transitions:
             gain_src = transition['gain-src']
             gain_target = transition['gain-target']
@@ -58,15 +56,15 @@ class SwimlaneVisualizer:
             current_x += length
 
         # Customize the axes
-        ax.set_title('AI + Human \n Swimlane visualization)')
+        ax.set_title(f"Agent Swim Lane\n(an LLM based agent task participation level vizualizer)\nparticipants: {delegator} & {delegate}")
         ax.set_xlabel('Task Duration (to completion →)')
-        ax.set_ylabel(' AI \n Involvement ')
+        ax.set_ylabel(f"(Delegate)\n{delegate}")
         ax.yaxis.set_major_formatter(FuncFormatter(self.to_percentage))  # Format y-axis as percentages
         ax.grid(False)
         
         # Remove x-axis tick labels
         ax.set_xticklabels([])
-        # Set x-axis limits to always show 0 to 8
+        # Set x-axis limits to always show 0 to 8 (no specific unit)
         ax.set_xlim(0, 8)
         # Set y-axis limits to always show 0% to 100%
         ax.set_ylim(0, 1)
@@ -75,11 +73,11 @@ class SwimlaneVisualizer:
         ax2 = ax.twinx()
         ax2.set_ylim(0, 1)
         ax2.yaxis.set_major_formatter(FuncFormatter(self.reverse_to_percentage))
-        ax2.set_ylabel(' HUMAN \n Involvement ')
+        ax2.set_ylabel(f"(Oversight)\n{delegator}")
 
         # Legend
-        ax.plot([], [], 's', color='cornflowerblue', label='HUMAN')  # 's' for square
-        ax.plot([], [], 's', color='cyan', label='AI')
+        ax.plot([], [], 's', color='cornflowerblue', label=delegator)  # 's' for square
+        ax.plot([], [], 's', color='cyan', label=delegate)
         legend = ax.legend(loc='upper right', frameon=True)
         legend.get_frame().set_facecolor('lightgrey')
 
@@ -117,11 +115,13 @@ class SwimlaneVisualizer:
         return (timeline_parts, summary) 
 
     def plot_timeline(self, timeline_parts, summary):
-        print("PARTICIPATION SUMMARY: " + summary)
         return self.plot_transitions(timeline_parts)
 
-    def render_task(self, llm_client, task_description, model="gpt-4o"):
+    def render_task(self, llm_client, prompt_manager, task_description, model="gpt-4o"):
+        self.prompt_manager = prompt_manager
+        self.sys_prompts = [self.prompt_manager.sys_prompt, 
+                            self.prompt_manager.sys_prompt_post_processing]
+        
         timeline, summary = self.complete_timeline(llm_client, task_description, model=model)
+        print("\n\nPARTICIPATION SUMMARY: " + summary)
         return self.plot_timeline(timeline, summary)
-    
-
